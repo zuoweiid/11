@@ -3,22 +3,25 @@
 # Description: Build OpenWrt
 #============================================================================================
 
-name: 通用设备编译固件
+name: 通用设备编译固件  ## Actions工作流的名称
 
 on:
-  repository_dispatch:
-  workflow_dispatch:
+  repository_dispatch:               ## 存储库_调度  
+  workflow_dispatch:            ## 工作流程_调度
     inputs:
+    
       source_branch:
-        description: "Select the source branch"
+        description: "选择源码"  # Select the source branch
         required: false
-        default: "openwrt-main"
-        type: choice
-        options:
+        default: "openwrt-main"    # 默认选择官方源码
+        type: choice            # 类型：选择
+        options:              # 源码的选项，选项在：config/源码文件夹/config
           - openwrt-main
           - lede-master
           - immortalwrt-master
           - Lienol-master
+      
+      
       
 env:
   FEEDS_CONF: config/${{ inputs.source_branch }}/feeds.conf.default
@@ -36,10 +39,10 @@ jobs:
     if: ${{ github.event.repository.owner.id }} == ${{ github.event.sender.id }}
 
     steps:
-      - name: Checkout
+      - name: 准备环境    # Checkout
         uses: actions/checkout@main
 
-      - name: Initialization environment
+      - name: 安装编译环境    # Initialization environment
         id: init
         env:
           DEBIAN_FRONTEND: noninteractive
@@ -59,7 +62,7 @@ jobs:
           sudo timedatectl set-timezone "${TZ}"
           echo "status=success" >> ${GITHUB_OUTPUT}
 
-      - name: Clone source code [ ${{ inputs.source_branch }} ]
+      - name: 下载 [ ${{ inputs.source_branch }} ]源码
         id: codes
         working-directory: /workdir
         if: ${{ steps.init.outputs.status }} == 'success' && !cancelled()
@@ -86,30 +89,30 @@ jobs:
               exit 1
           fi
 
-          # Clone source code
+          # 下载源代码
           git clone -q --single-branch --depth=1 --branch=${REPO_BRANCH} ${REPO_URL} openwrt
           ln -sf /workdir/openwrt ${GITHUB_WORKSPACE}/openwrt
 
-          # Set output information
+          # 设置输出信息
           echo "build_tag=OpenWrt_${TAGS_NAME}_${{ inputs.openwrt_storage }}_$(date +"%Y.%m")" >> ${GITHUB_OUTPUT}
           echo -e "REPO_URL: [ ${REPO_URL} ]\nREPO_BRANCH: [ ${REPO_BRANCH} ]\nTAGS_NAME: [ ${TAGS_NAME} ]"
           df -hT ${PWD}
           echo "status=success" >> ${GITHUB_OUTPUT}
 
-      - name: Load custom feeds
+      - name: 加载DIY_P1_SH
         run: |
           [[ -f "${FEEDS_CONF}" ]] && cp -f ${FEEDS_CONF} openwrt/feeds.conf.default
           chmod +x ${DIY_P1_SH}
           cd openwrt/
           ${GITHUB_WORKSPACE}/${DIY_P1_SH}
 
-      - name: Update feeds
+      - name: 更新源插件
         run: cd openwrt/ && ./scripts/feeds update -a
 
-      - name: Install feeds
+      - name: 安装源插件
         run: cd openwrt/ && ./scripts/feeds install -a
 
-      - name: Load custom configuration
+      - name: 加载DIY_P2_SH
         run: |
           [[ -d "files" ]] && mv -f files openwrt/files
           [[ -e "${CONFIG_FILE}" ]] && cp -f ${CONFIG_FILE} openwrt/.config
@@ -117,7 +120,7 @@ jobs:
           cd openwrt/
           ${GITHUB_WORKSPACE}/${DIY_P2_SH}
 
-      - name: Download package
+      - name: 下载DL库
         id: package
         run: |
           cd openwrt/
@@ -126,7 +129,7 @@ jobs:
           find dl -size -1024c -exec ls -l {} \;
           find dl -size -1024c -exec rm -f {} \;
 
-      - name: Compile the OpenWrt
+      - name: 开始编译固件
         id: compile
         run: |
           cd openwrt/
@@ -135,18 +138,18 @@ jobs:
           echo "status=success" >> ${GITHUB_OUTPUT}
 
 
-      - name: Check space usage
+      - name: 整理空间
         if: (!cancelled())
         run: df -hT
 
-      - name: Upload bin directory
+      - name: 上传bin目录
         uses: actions/upload-artifact@main
         if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
         with:
           name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
           path: openwrt/bin
 
-      - name: Organize files
+      - name: 整理文件
         id: organize
         if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
         run: |
@@ -155,14 +158,14 @@ jobs:
           echo "FIRMWARE=$PWD" >> $GITHUB_ENV
           echo "::set-output name=status::success"
 
-      - name: Upload firmware directory
+      - name: 上传固件目录
         uses: actions/upload-artifact@main
         if: steps.organize.outputs.status == 'success' && !cancelled()
         with:
           name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
           path: ${{ env.FIRMWARE }}
 
-      - name: Generate release tag
+      - name: 生成发布标签
         id: tag
         if: env.UPLOAD_RELEASE == 'true' && !cancelled()
         run: |
@@ -172,7 +175,7 @@ jobs:
           [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
           echo "::set-output name=status::success"
 
-      - name: Upload firmware to release
+      - name: 上传固件发布
         uses: softprops/action-gh-release@v1
         if: steps.tag.outputs.status == 'success' && !cancelled()
         env:
@@ -182,22 +185,22 @@ jobs:
           body_path: release.txt
           files: ${{ env.FIRMWARE }}/*
 
-      - name: Delete workflow runs
+      - name: 删除工作流程运行
         uses: GitRML/delete-workflow-runs@main
         with:
           retain_days: 1
           keep_minimum_runs: 3
           token: ${{ secrets.GH_TOKEN }}
           body: |
-
-            ### OpenWrt Image information
+            
+            ### OpenWrt 图像信息
             - Default IP: 192.168.1.1
             - Default username: root
             - Default password: password
             - Default WIFI name: OpenWrt
             - Default WIFI password: none
-            ### Install to EMMC
+            ### 安装到EMMC
             - Login to OpenWrt → System → Amlogic Service → Install OpenWrt
-            ### OpenWrt Image Verification
+            ### OpenWrt 图像验证
             - sha256sum
     

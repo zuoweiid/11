@@ -40,7 +40,9 @@ jobs:
       
     - name: 安装编译环境
       run: |     
-        version=$(curl -s "https://api.github.com/repos/wxfyes/N1openwrt/releases/latest" | awk -F '"' '/tag_name/{print $4}')           #  在这个N1固件发布链接中，找到最新的"tag_name": "ARMv8_ROOTFS",  并把结果 变量=ARMv8_ROOTFS
+        version=$(curl -s "https://api.github.com/repos/wxfyes/N1openwrt/releases/latest" | awk -F '"' '/tag_name/{print $4}')
+        #  在这个N1固件发布链接中，找到最新的"tag_name": "ARMv8_ROOTFS",  并把标签结果 变量=ARMv8_ROOTFS
+        
         
         echo "version=$version"  >> $GITHUB_ENV
         echo "DATE=$(date "+%Y-%m-%d %H:%M:%S")"  >> $GITHUB_ENV
@@ -99,9 +101,9 @@ jobs:
       if: (!cancelled())
       run: df -hT
 
-    - name: 创建版本
+    - name: 生成发布标签
       id: release
-      uses: ncipollo/release-action@v1
+      uses: ncipollo/release-action@v2
       with:
         name: ${{ env.DATE }} 🚀 N1-Openwrt-img | 编译
         allowUpdates: true

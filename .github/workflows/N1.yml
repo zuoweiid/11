@@ -44,8 +44,8 @@ jobs:
         #  在这个N1固件发布链接中，找到最新的"tag_name": "ARMv8_ROOTFS",  并把标签结果 变量=ARMv8_ROOTFS
         
         
-        echo "version=$version"  >> $GITHUB_ENV
-        echo "DATE=$(date "+%Y-%m-%d %H:%M:%S")"  >> $GITHUB_ENV
+        echo "version=$version"  >> $GITHUB_ENV                            # 把 ARMv8_ROOTFS 变量写入     ENV变量中
+        echo "DATE=$(date "+%Y-%m-%d %H:%M:%S")"  >> $GITHUB_ENV           # 把 DATE时间     变量写入     ENV变量中
         
         sudo chmod  -R 777 /opt             # opt 777权限
         cp -r ${FLIPPY_NAME}/opt/* /opt     # 拷贝内核至 opt目录呢
@@ -103,11 +103,11 @@ jobs:
 
     - name: 生成发布标签
       id: release
-      uses: ncipollo/release-action@v2
+      uses: ncipollo/release-action@v1
       with:
         name: ${{ env.DATE }} 🚀 N1-Openwrt-img | 编译
-        allowUpdates: true
-        tag: ${{ env.version }}
+        allowUpdates: true                  # 显示最新的
+        tag: ${{ env.version }}             # 左边标签显示 version的变量 ：ARMv8_ROOTFS
         commit: main
         token: ${{ secrets.TOKEN }}
         body: |
